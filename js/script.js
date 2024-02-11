@@ -2,6 +2,14 @@ const state = {
     currentPage: window.location.pathname,
 };
 
+const searchObj = {
+    term: '',
+    type: '',
+    page: 1,
+    totalPages: 1,
+    totalResults: 0,
+};
+
 const options = {
     method: 'GET',
     headers: {
@@ -24,13 +32,13 @@ async function displayPopularMovies() {
     const results = popularFetch.results;
 
     results.forEach((movie) => {
-        createMovieCard(movie);
+        const movieCardList = document.getElementById('popular-movies');
+        const card = createMovieCard(movie);
+        movieCardList.appendChild(card);
     });
 }
 
 function createMovieCard(movie) {
-    const movieCardList = document.getElementById('popular-movies');
-
     const card = document.createElement('div');
     card.classList.add('card');
 
@@ -38,10 +46,15 @@ function createMovieCard(movie) {
     cardLink.setAttribute('href', `movie-details.html?id=${movie.id}`);
 
     const cardImage = document.createElement('img');
-    cardImage.setAttribute(
-        'src',
-        `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    );
+    if (movie.poster_path) {
+        cardImage.setAttribute(
+            'src',
+            `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        );
+    } else {
+        cardImage.setAttribute('src', `images/no-image.jpg`);
+    }
+
     cardImage.setAttribute('alt', `${movie.title} movie poster`);
     cardImage.classList.add('card-img-top');
 
@@ -68,7 +81,7 @@ function createMovieCard(movie) {
     card.appendChild(cardLink);
     card.appendChild(cardBody);
 
-    movieCardList.appendChild(card);
+    return card;
 }
 
 // SHOWS PAGE
@@ -79,13 +92,13 @@ async function displayPopularTv() {
     const results = popularFetch.results;
 
     results.forEach((tv) => {
-        createTvCard(tv);
+        const movieCardList = document.getElementById('popular-shows');
+        const card = createTvCard(tv);
+        movieCardList.appendChild(card);
     });
 }
 
 function createTvCard(tv) {
-    const movieCardList = document.getElementById('popular-shows');
-
     const card = document.createElement('div');
     card.classList.add('card');
 
@@ -93,10 +106,15 @@ function createTvCard(tv) {
     cardLink.setAttribute('href', `tv-details.html?id=${tv.id}`);
 
     const cardImage = document.createElement('img');
-    cardImage.setAttribute(
-        'src',
-        `https://image.tmdb.org/t/p/w500${tv.poster_path}`
-    );
+    if (tv.poster_path) {
+        cardImage.setAttribute(
+            'src',
+            `https://image.tmdb.org/t/p/w500${tv.poster_path}`
+        );
+    } else {
+        cardImage.setAttribute('src', `images/no-image.jpg`);
+    }
+
     cardImage.setAttribute('alt', `${tv.name} tv show poster`);
     cardImage.classList.add('card-img-top');
 
@@ -123,7 +141,7 @@ function createTvCard(tv) {
     card.appendChild(cardLink);
     card.appendChild(cardBody);
 
-    movieCardList.appendChild(card);
+    return card;
 }
 
 // MOVIE DETAILS PAGE
@@ -141,10 +159,14 @@ function createMovieDetails(movie) {
 
     // POSTER IMAGE
     const image = movieDetailsWrapper.querySelector('img');
-    image.setAttribute(
-        'src',
-        `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-    );
+    if (movie.poster_path) {
+        image.setAttribute(
+            'src',
+            `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        );
+    } else {
+        image.setAttribute('src', `images/no-image.jpg`);
+    }
 
     // TITLE
     const movieTitle = movieDetailsWrapper.querySelector('h2');
@@ -208,6 +230,178 @@ function createMovieDetails(movie) {
     companiesList.textContent = companiesList.textContent.slice(0, -2);
 }
 
+// TV DETAILS
+async function displayTvDetails() {
+    const tvId = location.search.split('=')[1];
+    const tvFetch = await fetchData(`https://api.themoviedb.org/3/tv/${tvId}`);
+
+    createTvDetails(tvFetch);
+}
+
+function createTvDetails(tv) {
+    const tvDetailsWrapper = document.querySelector('#show-details');
+
+    const image = tvDetailsWrapper.querySelector('img');
+    image.setAttribute(
+        'src',
+        `https://image.tmdb.org/t/p/w500${tv.poster_path}`
+    );
+
+    const title = tvDetailsWrapper.querySelector('h2');
+    title.textContent = tv.name;
+
+    const rating = tvDetailsWrapper.querySelector('p');
+    const ratingValue = tv.vote_average.toFixed(1);
+    rating.innerHTML = `<i class="fas fa-star text-primary"></i>
+    ${ratingValue} / 10`;
+
+    const releaseDateElement = tvDetailsWrapper.querySelector('p:nth-child(3)');
+    releaseDateElement.textContent = `Release Date: ${formatDate(
+        tv.first_air_date
+    )}`;
+
+    const description = tvDetailsWrapper.querySelector('p:nth-child(4)');
+    description.textContent = tv.overview;
+
+    const genreList = tvDetailsWrapper.querySelector('ul');
+    const genres = tv.genres;
+    genres.forEach((genre) => {
+        const listElement = document.createElement('li');
+        listElement.textContent = genre.name;
+        genreList.appendChild(listElement);
+    });
+
+    const bottomInfoWrapper = tvDetailsWrapper.querySelector('.details-bottom');
+
+    const tvInfoList = bottomInfoWrapper.querySelector('ul');
+
+    tvInfoList.children[0].innerHTML = `<span class="text-secondary">Number Of Episodes:</span> ${tv.number_of_episodes}`;
+    tvInfoList.children[1].innerHTML = `<span class="text-secondary">Last Episode To Air:</span> ${tv.last_episode_to_air.name}`;
+    tvInfoList.children[2].innerHTML = `<span class="text-secondary">Status:</span> ${tv.status}`;
+
+    const companiesList = bottomInfoWrapper.querySelector('.list-group');
+
+    const companiesData = tv.production_companies;
+
+    companiesData.forEach((company) => {
+        companiesList.textContent += `${company.name}, `;
+    });
+    companiesList.textContent = companiesList.textContent.slice(0, -2);
+}
+
+// SEARCH
+
+async function search() {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+
+    searchObj.type = urlParams.get('type');
+    searchObj.term = urlParams.get('search-term');
+
+    if (searchObj.term) {
+        const { results, total_pages, page, total_results } =
+            await searchAPIData();
+
+        searchObj.page = page;
+        searchObj.totalPages = total_pages;
+        searchObj.totalResults = total_results;
+
+        if (results.length === 0) {
+            showAlert('No results found', 'error');
+            return;
+        }
+
+        displaySearchResults(results);
+    } else {
+        showAlert('Please enter your search parameter', 'error');
+    }
+}
+
+function displaySearchResults(results) {
+    document.querySelector('#search-results-heading').innerHTML = `<h2>From ${
+        20 * (searchObj.page - 1) + 1
+    } to ${20 * (searchObj.page - 1) + results.length} of ${
+        searchObj.totalResults
+    } results for "${searchObj.term}"</h2>`;
+
+    const resultsListArray = Array.from(
+        document.getElementById('search-results').children
+    );
+    resultsListArray.forEach((item) => {
+        if (item.classList.contains('card')) {
+            item.remove();
+        }
+    });
+
+    if (searchObj.type === 'movie') {
+        results.forEach((result) => {
+            const resultsList = document.getElementById('search-results');
+            const card = createMovieCard(result);
+            resultsList.appendChild(card);
+        });
+        document.getElementById('movie').checked = true;
+    } else if (searchObj.type === 'tv') {
+        results.forEach((result) => {
+            const resultsList = document.getElementById('search-results');
+            const card = createTvCard(result);
+            resultsList.appendChild(card);
+        });
+        document.getElementById('tv').checked = true;
+    }
+
+    displayPagination();
+}
+
+function displayPagination() {
+    const paginationAbsoluteParent = document.querySelector('#pagination');
+    Array.from(paginationAbsoluteParent.children).forEach((item) => {
+        item.remove();
+    });
+
+    const paginationWrapper = document.createElement('div');
+    paginationWrapper.classList.add('pagination');
+    paginationWrapper.innerHTML = `<button class="btn btn-primary" id="prev">Prev</button>
+    <button class="btn btn-primary" id="next">Next</button>
+    <div class="page-counter">Page ${searchObj.page} of ${searchObj.totalPages}</div>`;
+
+    paginationAbsoluteParent.appendChild(paginationWrapper);
+
+    // DISABLE
+    if (searchObj.page == 1) {
+        document.querySelector('#prev').disabled = true;
+    }
+
+    if (searchObj.page == searchObj.totalPages) {
+        document.querySelector('#next').disabled = true;
+    }
+
+    // NEXT PAGE
+    document.querySelector('#next').addEventListener('click', async () => {
+        searchObj.page++;
+        const { results, total_pages } = await searchAPIData();
+        displaySearchResults(results);
+    });
+
+    document.querySelector('#prev').addEventListener('click', async () => {
+        searchObj.page--;
+        const { results, total_pages } = await searchAPIData();
+        displaySearchResults(results);
+    });
+}
+
+async function searchAPIData() {
+    showSpinner();
+    const response = await fetch(
+        `https://api.themoviedb.org/3/search/${searchObj.type}?query=${searchObj.term}&page=${searchObj.page}`,
+        options
+    );
+    const data = await response.json();
+
+    hideSpinner();
+
+    return data;
+}
+
 // ANY PAGE
 async function fetchData(link) {
     showSpinner();
@@ -233,6 +427,15 @@ function highlightActive() {
     });
 }
 
+function showAlert(message, className) {
+    const alertEl = document.createElement('div');
+    alertEl.classList.add('alert', className);
+    alertEl.appendChild(document.createTextNode(message));
+    document.querySelector('#alert').appendChild(alertEl);
+
+    setTimeout(() => alertEl.remove(), 5000);
+}
+
 //ADDITIONAL FUNCTIONS
 function showSpinner() {
     spinner.classList.add('show');
@@ -252,6 +455,7 @@ function init() {
         case '/':
         case '/index.html':
             displayPopularMovies();
+            searchSetup();
             break;
         case '/shows.html':
             displayPopularTv();
@@ -260,10 +464,10 @@ function init() {
             displayMovieDetails();
             break;
         case '/tv-details.html':
-            console.log('tv details');
+            displayTvDetails();
             break;
         case '/search.html':
-            console.log('search');
+            search();
     }
 
     highlightActive();
