@@ -449,11 +449,65 @@ function hideSpinner() {
     body.classList.remove('noscroll');
 }
 
+// SLIDER
+async function displaySlider() {
+    const response = await fetchData(
+        'https://api.themoviedb.org/3/movie/now_playing',
+        options
+    );
+
+    const results = response.results;
+
+    results.forEach((result) => {
+        const playingCardWrapper = document.createElement('div');
+        playingCardWrapper.classList.add('swiper-slide');
+
+        playingCardWrapper.innerHTML = `<a href="movie-details.html?id=${
+            result.id
+        }"><img src="https://image.tmdb.org/t/p/w500${
+            result.poster_path
+        }" alt="Movie Title" /></a><h4 class="swiper-rating"><i class="fas fa-star text-secondary"></i> ${result.vote_average.toFixed(
+            1
+        )} / 10</h4>`;
+
+        document
+            .querySelector('.swiper-wrapper')
+            .appendChild(playingCardWrapper);
+
+        initSwiper();
+    });
+}
+
+function initSwiper() {
+    const swiper = new Swiper('.swiper', {
+        slidesPerView: 1,
+        spaceBetween: 30,
+        freeMode: true,
+        loop: true,
+        autoplay: {
+            delay: 4000,
+            disableOnInteraction: false,
+        },
+        breakpoints: {
+            500: {
+                slidesPerView: 2,
+            },
+            700: {
+                slidesPerView: 3,
+            },
+            1200: {
+                slidesPerView: 5,
+            },
+        },
+    });
+}
+
 // INIT
 function init() {
     switch (state.currentPage) {
         case '/':
         case '/index.html':
+            displaySlider();
             displayPopularMovies();
             searchSetup();
             break;
